@@ -1,5 +1,6 @@
 
 import random
+from collections import deque
 
 
 class Ant:
@@ -9,6 +10,7 @@ class Ant:
         self.destination = destination
         self.alpha = alpha
         self.beta = beta
+        self.goal_distances = self._calculate_goal_distances()
 
     def find_path(self):
         current = self.start
@@ -38,21 +40,39 @@ class Ant:
 
         return path, total_distance
 
+
+
+
     def _choose_next(self, current, candidates):
         weights = []
 
         for neighbor in candidates:
-            pheromone = self.graph.get_pheromone(
-                current, neighbor
-            )
-            distance = self.graph.get_distance(
-                current, neighbor
-            )
+            pheromone = self.graph.get_pheromone(current, neighbor)
 
-            weight = (
-                pheromone ** self.alpha
-                * (1.0 / distance) ** self.beta
-            )
+            if neighbor in self.goal_distances:
+                # Shortest remaining distance through the graph.
+                heuristic = 1.0 / (1.0 + self.goal_distances[neighbor])
+            else:
+                # Keep unreachable branches possible, but strongly disfavored.
+                heuristic = 1e-6
+
+            weight = pheromone ** self.alpha * heuristic ** self.beta
             weights.append(weight)
 
         return random.choices(candidates, weights=weights, k=1)[0]
+
+    
+    def _calculate_goal_distances(self):
+        distances = {self.destination: 0}
+        queue = deque([self.destination])
+
+        while queue:
+            current = queue.popleft()
+
+            for neighbor in self.graph.get_neighbors(current):
+                if neighbor not in distances:
+                    distances[neighbor] = distances[current] + 1
+                    queue.append(neighbor)
+
+        return distances
+

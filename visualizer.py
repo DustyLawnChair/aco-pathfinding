@@ -44,7 +44,9 @@ def build_simulation():
         start=start,
         destination=destination,
         num_ants=20,
-        evaporation_rate=0.1,
+        evaporation_rate=0.3,
+        alpha=1.0,
+        beta=2.0,
     )
 
     shortest_path = find_shortest_path(graph, start, destination)
@@ -353,9 +355,21 @@ def main():
             else "Unavailable"
         )
 
+        if shortest_path and math.isfinite(colony.best_distance):
+            optimal_distance = len(shortest_path) - 1
+            optimality_gap = (
+                (colony.best_distance - optimal_distance)
+                / optimal_distance
+            ) * 100
+            gap_text = f"{optimality_gap:.1f}%"
+        else:
+            gap_text = "Unavailable"
+
+
         status_lines = [
             f"Generation: {generation}    Active ants: {len(active_ants)}",
             f"Best ACO distance: {best}    BFS optimal distance: {optimal}",
+            f"Optimality gap: {gap_text}",
             f"Obstacles: {len(obstacles)}",
             "SPACE: pause/resume    R: new grid    ESC: quit",
         ]
