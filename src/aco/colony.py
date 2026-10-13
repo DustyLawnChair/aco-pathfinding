@@ -1,4 +1,5 @@
 from src.aco.ant import Ant
+from collections import deque
 
 
 class Colony:
@@ -24,6 +25,7 @@ class Colony:
 
         self.best_path = []
         self.best_distance = float("inf")
+        self.goal_distances = self._calculate_goal_distances()
 
     def run_iteration(self):
         successful_paths = []
@@ -36,6 +38,7 @@ class Colony:
                 self.destination,
                 alpha=self.alpha,
                 beta=self.beta,
+                goal_distances=self.goal_distances,
             )
 
             path, distance = ant.find_path()
@@ -53,15 +56,38 @@ class Colony:
                 1.0 - self.evaporation_rate
             )
 
-        # Reinforce edges used by successful ants.
-        for path, distance in successful_paths:
-            deposit = self.pheromone_deposit / distance
+       
 
-            for i in range(len(path) - 1):
-                node_a = path[i]
-                node_b = path[i + 1]
+        # Reinforce only the best successful route this iteration.
+        if successful_paths:
+            best_iteration_path, best_iteration_distance = min(
+                successful_paths,
+                key=lambda result: result[1],
+            )
+
+            deposit = self.pheromone_deposit / best_iteration_distance
+
+            for i in range(len(best_iteration_path) - 1):
+                node_a = best_iteration_path[i]
+                node_b = best_iteration_path[i + 1]
 
                 self.graph.edges[(node_a, node_b)]["pheromone"] += deposit
                 self.graph.edges[(node_b, node_a)]["pheromone"] += deposit
 
+        # Always return a list, even if no ants find a path.
         return successful_paths
+
+
+    def _calculate_goal_distances(self):
+        distances = {self.destination: 0}
+        queue = deque([self.destination])
+
+        while queue:
+            current = queue.popleft()
+
+            for neighbor in self.graph.get_neighbors(current):
+                if neighbor not in distances:
+                    distances[neighbor] = distances[current] + 1
+                    queue.append(neighbor)
+
+        return distances

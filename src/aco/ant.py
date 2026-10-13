@@ -3,14 +3,28 @@ import random
 from collections import deque
 
 
+
 class Ant:
-    def __init__(self, graph, start, destination, alpha=1.0, beta=2.0):
+    def __init__(
+        self,
+        graph,
+        start,
+        destination,
+        alpha=1.0,
+        beta=2.0,
+        goal_distances=None,
+    ):
         self.graph = graph
         self.start = start
         self.destination = destination
         self.alpha = alpha
         self.beta = beta
-        self.goal_distances = self._calculate_goal_distances()
+
+        self.goal_distances = (
+            goal_distances
+            if goal_distances is not None
+            else self._calculate_goal_distances()
+        )
 
     def find_path(self):
         current = self.start
@@ -43,17 +57,21 @@ class Ant:
 
 
 
+
     def _choose_next(self, current, candidates):
+        # Occasionally explore a random available neighbor.
+        if random.random() < 0.10:
+            return random.choice(candidates)
+
+        # Otherwise, use pheromone and heuristic weights.
         weights = []
 
         for neighbor in candidates:
             pheromone = self.graph.get_pheromone(current, neighbor)
 
             if neighbor in self.goal_distances:
-                # Shortest remaining distance through the graph.
                 heuristic = 1.0 / (1.0 + self.goal_distances[neighbor])
             else:
-                # Keep unreachable branches possible, but strongly disfavored.
                 heuristic = 1e-6
 
             weight = pheromone ** self.alpha * heuristic ** self.beta
