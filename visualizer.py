@@ -25,11 +25,15 @@ WEAK_COLOR = (65, 85, 150)
 STRONG_COLOR = (80, 240, 150)
 
 ANT_SPEED = 180
+SPEED_MULTIPLIER = 1.0
+MIN_SPEED = 0.25
+MAX_SPEED = 8.0
+SPEED_STEP = 0.5
 
 GRAPH_X = 185
-GRAPH_Y = 850
+GRAPH_Y = 875
 GRAPH_WIDTH = 500
-GRAPH_HEIGHT = 65
+GRAPH_HEIGHT = 55
 
 
 def build_simulation():
@@ -86,7 +90,8 @@ def spawn_ants(colony):
     return active_ants
 
 
-def update_ants(active_ants, delta_time):
+
+def update_ants(active_ants, delta_time, speed_multiplier=1.0):
     remaining = []
 
     for ant in active_ants:
@@ -103,7 +108,9 @@ def update_ants(active_ants, delta_time):
         x2, y2 = cell_center(node_b)
         length = math.hypot(x2 - x1, y2 - y1)
 
-        ant["progress"] += ANT_SPEED * delta_time / length
+        ant["progress"] += (
+            ANT_SPEED * speed_multiplier * delta_time / length
+        )
 
         while ant["progress"] >= 1.0:
             ant["progress"] -= 1.0
@@ -301,6 +308,10 @@ def main():
 
     paused = False
     running = True
+    generation_limit = 100
+    simulation_complete = False
+    speed_multiplier = 1.0
+    fast_forward = False
 
     best_distance_history = []
 
@@ -321,14 +332,48 @@ def main():
                         reset_simulation()
                     )
                     best_distance_history = []
+                elif event.key == pygame.K_1:
+                    generation_limit = 100
+                    simulation_complete = False
+                elif event.key == pygame.K_2:
+                    generation_limit = 200
+                    simulation_complete = False
+                elif event.key == pygame.K_3:
+                    generation_limit = 300
+                    simulation_complete = False
+                elif event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
+                    speed_multiplier = min(MAX_SPEED, speed_multiplier + SPEED_STEP)
 
-        if not paused:
-            active_ants = update_ants(active_ants, delta_time)
+                elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                    speed_multiplier = max(MIN_SPEED, speed_multiplier - SPEED_STEP)
+
+                elif event.key == pygame.K_0:
+                    speed_multiplier = 1.0
+
+                elif event.key == pygame.K_f:
+                    fast_forward = not fast_forward
+
+
+
+
+        if not paused and not simulation_complete:
+            if fast_forward:
+                active_ants = []
+
+            else:
+                active_ants = update_ants(
+                    active_ants,
+                    delta_time,
+                    speed_multiplier,
+                )
 
             if not active_ants:
-                active_ants = spawn_ants(colony)
-                generation += 1
-                best_distance_history.append(colony.best_distance)
+                if generation >= generation_limit:
+                    simulation_complete = True
+                else:
+                    active_ants = spawn_ants(colony)
+                    generation += 1
+                    best_distance_history.append(colony.best_distance)
 
         screen.fill(BACKGROUND)
 
@@ -366,17 +411,21 @@ def main():
             gap_text = "Unavailable"
 
 
+
         status_lines = [
-            f"Generation: {generation}    Active ants: {len(active_ants)}",
+            f"Generation: {generation}/{generation_limit}    Active ants: {len(active_ants)}",
             f"Best ACO distance: {best}    BFS optimal distance: {optimal}",
             f"Optimality gap: {gap_text}",
             f"Obstacles: {len(obstacles)}",
+            "Search limit: 1 = 100 gens    2 = 200 gens    3 = 300 gens",
+            f"Speed: {speed_multiplier:.1f}x    Fast-forward: {'ON' if fast_forward else 'OFF'}",
+            "+/-: speed    0: reset speed    F: fast-forward",
             "SPACE: pause/resume    R: new grid    ESC: quit",
         ]
 
         for index, line in enumerate(status_lines):
             rendered = small_font.render(line, True, TEXT_COLOR)
-            screen.blit(rendered, (GRID_X, 690 + index * 25))
+            screen.blit(rendered, (GRID_X, 690 + index * 21))
 
         pygame.display.flip()
 
