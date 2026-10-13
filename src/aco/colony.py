@@ -1,5 +1,7 @@
-from src.aco.ant import Ant
+
 from collections import deque
+
+from src.aco.ant import Ant
 
 
 class Colony:
@@ -13,7 +15,18 @@ class Colony:
         alpha=1.0,
         beta=2.0,
         pheromone_deposit=100.0,
+        exploration_rate=0.10,
+        reinforcement_top_k=1,
     ):
+        if num_ants < 1:
+            raise ValueError("num_ants must be at least 1.")
+        if not 0.0 <= evaporation_rate <= 1.0:
+            raise ValueError("evaporation_rate must be between 0 and 1.")
+        if reinforcement_top_k < 1:
+            raise ValueError("reinforcement_top_k must be at least 1.")
+        if not 0.0 <= exploration_rate <= 1.0:
+            raise ValueError("exploration_rate must be between 0 and 1.")
+
         self.graph = graph
         self.start = start
         self.destination = destination
@@ -22,6 +35,8 @@ class Colony:
         self.alpha = alpha
         self.beta = beta
         self.pheromone_deposit = pheromone_deposit
+        self.exploration_rate = exploration_rate
+        self.reinforcement_top_k = reinforcement_top_k
 
         self.best_path = []
         self.best_distance = float("inf")
@@ -30,7 +45,7 @@ class Colony:
     def run_iteration(self):
         successful_paths = []
 
-        # Each ant independently searches for a path.
+        # Each ant searches independently using the shared distance map.
         for _ in range(self.num_ants):
             ant = Ant(
                 self.graph,
@@ -39,6 +54,7 @@ class Colony:
                 alpha=self.alpha,
                 beta=self.beta,
                 goal_distances=self.goal_distances,
+                exploration_rate=self.exploration_rate,
             )
 
             path, distance = ant.find_path()
@@ -47,36 +63,36 @@ class Colony:
                 successful_paths.append((path, distance))
 
                 if distance < self.best_distance:
-                    self.best_path = path
+                    self.best_path = path.copy()
                     self.best_distance = distance
 
-        # Evaporate pheromones on all edges.
+        # Evaporate pheromone on every edge.
         for edge in self.graph.edges:
             self.graph.edges[edge]["pheromone"] *= (
                 1.0 - self.evaporation_rate
             )
 
-       
+        # Reinforce the top-k shortest successful paths.
+        best_paths = sorted(
+            successful_paths,
+            key=lambda result: result[1],
+        )[:self.reinforcement_top_k]
 
-        # Reinforce only the best successful route this iteration.
-        if successful_paths:
-            best_iteration_path, best_iteration_distance = min(
-                successful_paths,
-                key=lambda result: result[1],
-            )
+        for path, distance in best_paths:
+            if distance <= 0:
+                continue
 
-            deposit = self.pheromone_deposit / best_iteration_distance
+            deposit = self.pheromone_deposit / distance
 
-            for i in range(len(best_iteration_path) - 1):
-                node_a = best_iteration_path[i]
-                node_b = best_iteration_path[i + 1]
+            for i in range(len(path) - 1):
+                node_a = path[i]
+                node_b = path[i + 1]
 
                 self.graph.edges[(node_a, node_b)]["pheromone"] += deposit
                 self.graph.edges[(node_b, node_a)]["pheromone"] += deposit
 
-        # Always return a list, even if no ants find a path.
+        # Always return a list, including when no ant finds a route.
         return successful_paths
-
 
     def _calculate_goal_distances(self):
         distances = {self.destination: 0}
