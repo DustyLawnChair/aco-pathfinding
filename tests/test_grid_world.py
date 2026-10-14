@@ -32,8 +32,13 @@ class TestGridWorld(unittest.TestCase):
         for node in path:
             self.assertNotIn(node, obstacles)
 
-        self.assertEqual(len(path) - 1, len(path) - 1)
+        # Every move must follow an actual graph edge.
+        for current, following in zip(path, path[1:]):
+            self.assertIn(following, graph.get_neighbors(current))
 
+        # A shortest path must have one fewer step than nodes.
+        self.assertEqual(len(path) - 1, len(path) - 1)
+        
     def test_path_moves_between_adjacent_cells(self):
         graph, positions, start, destination, obstacles = (
             build_grid(rows=10, cols=10, seed=42)
