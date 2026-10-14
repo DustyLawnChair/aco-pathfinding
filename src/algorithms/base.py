@@ -1,5 +1,5 @@
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -8,6 +8,7 @@ class PathfindingResult:
     distance: float
     nodes_explored: int
     algorithm: str
+    explored_nodes: list = field(default_factory=list)
 
     @property
     def found(self):

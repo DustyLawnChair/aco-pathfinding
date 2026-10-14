@@ -1,4 +1,3 @@
-
 import heapq
 from itertools import count
 
@@ -27,11 +26,11 @@ def run_astar(graph, start, destination):
 
     came_from = {start: None}
     cost_so_far = {start: 0}
-    nodes_explored = 0
+    explored_nodes = []
 
     while frontier:
         _, _, current = heapq.heappop(frontier)
-        nodes_explored += 1
+        explored_nodes.append(current)
 
         if current == destination:
             break
@@ -63,8 +62,9 @@ def run_astar(graph, start, destination):
         return PathfindingResult(
             path=[],
             distance=float("inf"),
-            nodes_explored=nodes_explored,
+            nodes_explored=len(explored_nodes),
             algorithm="A*",
+            explored_nodes=explored_nodes,
         )
 
     path = []
@@ -79,6 +79,7 @@ def run_astar(graph, start, destination):
     return PathfindingResult(
         path=path,
         distance=cost_so_far[destination],
-        nodes_explored=nodes_explored,
+        nodes_explored=len(explored_nodes),
         algorithm="A*",
+        explored_nodes=explored_nodes,
     )

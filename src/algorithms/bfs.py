@@ -7,11 +7,11 @@ from src.algorithms.base import PathfindingResult
 def run_bfs(graph, start, destination):
     queue = deque([start])
     parent = {start: None}
-    nodes_explored = 0
+    explored_nodes = []
 
     while queue:
         current = queue.popleft()
-        nodes_explored += 1
+        explored_nodes.append(current)
 
         if current == destination:
             break
@@ -25,8 +25,9 @@ def run_bfs(graph, start, destination):
         return PathfindingResult(
             path=[],
             distance=float("inf"),
-            nodes_explored=nodes_explored,
+            nodes_explored=len(explored_nodes),
             algorithm="BFS",
+            explored_nodes=explored_nodes,
         )
 
     path = []
@@ -46,6 +47,7 @@ def run_bfs(graph, start, destination):
     return PathfindingResult(
         path=path,
         distance=distance,
-        nodes_explored=nodes_explored,
+        nodes_explored=len(explored_nodes),
         algorithm="BFS",
+        explored_nodes=explored_nodes,
     )
